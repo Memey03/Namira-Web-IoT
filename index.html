@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Google AI Studio App</title>
+    <script>
+      // Polyfill global and process for libraries like MQTT that might rely on them in browser
+      window.global = window;
+      if (typeof window.process === 'undefined') {
+        window.process = { env: {} };
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

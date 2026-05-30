@@ -29,36 +29,41 @@ export const VoiceCommandButton: React.FC = () => {
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'id-ID'; // Indonesian as in ESP32 code
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'id-ID'; // Indonesian as in ESP32 code
 
-    recognition.onstart = () => {
-      setIsListening(true);
-      setTranscript('Mendengarkan...');
-    };
+      recognition.onstart = () => {
+        setIsListening(true);
+        setTranscript('Mendengarkan...');
+      };
 
-    recognition.onresult = (event: any) => {
-      const current = event.resultIndex;
-      const result = event.results[current][0].transcript;
-      setTranscript(result);
-      processCommand(result);
-    };
+      recognition.onresult = (event: any) => {
+        const current = event.resultIndex;
+        const result = event.results[current][0].transcript;
+        setTranscript(result);
+        processCommand(result);
+      };
 
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error", event.error);
-      setIsListening(false);
-      setTranscript('Error: ' + event.error);
-      setTimeout(() => setTranscript(''), 3000);
-    };
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+        setTranscript('Error: ' + event.error);
+        setTimeout(() => setTranscript(''), 3000);
+      };
 
-    recognition.onend = () => {
-      setIsListening(false);
-      setTimeout(() => setTranscript(''), 3000);
-    };
+      recognition.onend = () => {
+        setIsListening(false);
+        setTimeout(() => setTranscript(''), 3000);
+      };
 
-    recognitionRef.current = recognition;
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.error("Failed to initialize speech recognition:", err);
+      setSupported(false);
+    }
   }, []);
 
   const toggleListen = () => {
@@ -101,8 +106,8 @@ export const VoiceCommandButton: React.FC = () => {
 
     // Suhu
     if (text.includes('suhu') || text.includes('temperatur') || text.includes('panas')) {
-       if (typeof window !== 'undefined' && window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(`Suhu saat ini adalah ${currentState.temperature} derajat Celcius`);
+       if (typeof window !== 'undefined' && window.speechSynthesis && windowAny?.SpeechSynthesisUtterance) {
+          const utterance = new windowAny.SpeechSynthesisUtterance(`Suhu saat ini adalah ${currentState.temperature} derajat Celcius`);
           utterance.lang = 'id-ID';
           window.speechSynthesis.speak(utterance);
        }
@@ -111,8 +116,8 @@ export const VoiceCommandButton: React.FC = () => {
 
     // Kelembapan
     if (text.includes('kelembap') || text.includes('lembab') || text.includes('humid')) {
-       if (typeof window !== 'undefined' && window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(`Kelembapan saat ini adalah ${currentState.humidity} persen`);
+       if (typeof window !== 'undefined' && window.speechSynthesis && windowAny?.SpeechSynthesisUtterance) {
+          const utterance = new windowAny.SpeechSynthesisUtterance(`Kelembapan saat ini adalah ${currentState.humidity} persen`);
           utterance.lang = 'id-ID';
           window.speechSynthesis.speak(utterance);
        }
