@@ -3,8 +3,8 @@ import { Mic, MicOff } from 'lucide-react';
 import { useMqtt } from '../mqttContext';
 
 // Support for cross-browser web speech api
-const windowAny = window as any;
-const SpeechRecognition = windowAny.SpeechRecognition || windowAny.webkitSpeechRecognition;
+const windowAny = typeof window !== 'undefined' ? window as any : null;
+const SpeechRecognition = windowAny ? (windowAny.SpeechRecognition || windowAny.webkitSpeechRecognition) : null;
 
 export const VoiceCommandButton: React.FC = () => {
   const { publish, state } = useMqtt();
@@ -12,6 +12,16 @@ export const VoiceCommandButton: React.FC = () => {
   const [supported, setSupported] = useState(true);
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<any>(null);
+  
+  // Ref to always use the latest state and publish function in speech callbacks
+  // without triggering re-initialization of SpeechRecognition
+  const stateRef = useRef(state);
+  const publishRef = useRef(publish);
+  
+  useEffect(() => {
+    stateRef.current = state;
+    publishRef.current = publish;
+  }, [state, publish]);
 
   useEffect(() => {
     if (!SpeechRecognition) {
@@ -61,6 +71,8 @@ export const VoiceCommandButton: React.FC = () => {
 
   const processCommand = (rawText: string) => {
     const text = rawText.toLowerCase();
+    const currentState = stateRef.current;
+    const currentPublish = publishRef.current;
 
     // Stop Variasi
     if (
@@ -70,9 +82,9 @@ export const VoiceCommandButton: React.FC = () => {
         text.includes('henti') ||
         text.includes('off'))
     ) {
-      publish('smarthome/variasi', 'STOP');
+      currentPublish('smarthome/variasi', 'STOP');
       for (let i = 1; i <= 4; i++) {
-         publish(`smarthome/lampu${i}`, 'OFF');
+         currentPublish(`smarthome/lampu${i}`, 'OFF');
       }
       return;
     }
@@ -80,17 +92,17 @@ export const VoiceCommandButton: React.FC = () => {
     // Variasi
     if (text.includes('variasi')) {
       if (text.includes('1') || text.includes('satu')) {
-        publish('smarthome/variasi', 'VARIASI1');
+        currentPublish('smarthome/variasi', 'VARIASI1');
       } else if (text.includes('2') || text.includes('dua')) {
-        publish('smarthome/variasi', 'VARIASI2');
+        currentPublish('smarthome/variasi', 'VARIASI2');
       }
       return;
     }
 
     // Suhu
     if (text.includes('suhu') || text.includes('temperatur') || text.includes('panas')) {
-       if (window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(`Suhu saat ini adalah ${state.temperature} derajat Celcius`);
+       if (typeof window !== 'undefined' && window.speechSynthesis) {
+          const utterance = new SpeechSynthesisUtterance(`Suhu saat ini adalah ${currentState.temperature} derajat Celcius`);
           utterance.lang = 'id-ID';
           window.speechSynthesis.speak(utterance);
        }
@@ -99,8 +111,8 @@ export const VoiceCommandButton: React.FC = () => {
 
     // Kelembapan
     if (text.includes('kelembap') || text.includes('lembab') || text.includes('humid')) {
-       if (window.speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(`Kelembapan saat ini adalah ${state.humidity} persen`);
+       if (typeof window !== 'undefined' && window.speechSynthesis) {
+          const utterance = new SpeechSynthesisUtterance(`Kelembapan saat ini adalah ${currentState.humidity} persen`);
           utterance.lang = 'id-ID';
           window.speechSynthesis.speak(utterance);
        }
@@ -132,13 +144,13 @@ export const VoiceCommandButton: React.FC = () => {
 
     if (lampu === -1) {
       // Semua lampu
-      publish('smarthome/variasi', 'STOP');
+      currentPublish('smarthome/variasi', 'STOP');
       for (let i = 1; i <= 4; i++) {
-        publish(`smarthome/lampu${i}`, isOn ? 'ON' : 'OFF');
+        currentPublish(`smarthome/lampu${i}`, isOn ? 'ON' : 'OFF');
       }
     } else {
-      publish('smarthome/variasi', 'STOP');
-      publish(`smarthome/lampu${lampu}`, isOn ? 'ON' : 'OFF');
+      currentPublish('smarthome/variasi', 'STOP');
+      currentPublish(`smarthome/lampu${lampu}`, isOn ? 'ON' : 'OFF');
     }
   };
 
